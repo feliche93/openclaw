@@ -14,6 +14,10 @@ services:
       - AUTH_USERNAME=${AUTH_USERNAME}
       - AUTH_PASSWORD=${AUTH_PASSWORD}
       - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
+      # Persisted state/workspace paths (align runtime + interactive CLI sessions)
+      - OPENCLAW_STATE_DIR=/data/.openclaw
+      - OPENCLAW_WORKSPACE_DIR=/data/workspace
+      - HOME=/data
       # Browser sidecar
       - BROWSER_CDP_URL=http://browser:9222
       - BROWSER_DEFAULT_PROFILE=openclaw
