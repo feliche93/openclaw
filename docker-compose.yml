@@ -19,7 +19,8 @@ services:
       - OPENCLAW_WORKSPACE_DIR=/data/workspace
       - HOME=/data
       # Browser sidecar
-      - BROWSER_CDP_URL=http://browser:9222
+      # openclaw-browser image proxies CDP on 9223 -> 9222 (host header fix)
+      - BROWSER_CDP_URL=http://browser:9223
       - BROWSER_DEFAULT_PROFILE=openclaw
       - BROWSER_EVALUATE_ENABLED=true
       # Hooks (optional)
