@@ -33,6 +33,46 @@ services:
       - browser
     restart: unless-stopped
 
+  # Google Workspace MCP server (multi-account/multi-user capable).
+  #
+  # Internal DNS from openclaw container:
+  # - MCP endpoint: http://workspace-mcp:8000/mcp
+  #
+  # Tool limiting (best practice):
+  # - Start with TOOL_TIER=core (e.g. allows Gmail drafting, but not sending).
+  # - Optionally set WORKSPACE_MCP_TOOLS="gmail drive calendar" to only load select services.
+  workspace-mcp:
+    build:
+      context: ./workspace-mcp
+    environment:
+      # OAuth credentials (required for any real use)
+      - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+      - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+
+      # Multi-user bearer token auth (OAuth 2.1). Turn off to use legacy auth.
+      - MCP_ENABLE_OAUTH21=${MCP_ENABLE_OAUTH21:-true}
+      - WORKSPACE_MCP_STATELESS_MODE=${WORKSPACE_MCP_STATELESS_MODE:-false}
+
+      # If you put the MCP behind a reverse proxy (Coolify domain, Tailscale proxy, etc),
+      # set this so OAuth endpoints/redirects use the externally reachable URL.
+      # - WORKSPACE_EXTERNAL_URL=https://workspace-mcp.example.com
+      - WORKSPACE_EXTERNAL_URL=${WORKSPACE_EXTERNAL_URL:-}
+      - WORKSPACE_MCP_BASE_URI=${WORKSPACE_MCP_BASE_URI:-http://localhost}
+      - WORKSPACE_MCP_PORT=8000
+      - GOOGLE_OAUTH_REDIRECT_URI=${GOOGLE_OAUTH_REDIRECT_URI:-}
+
+      # Optional: enable/limit tool surface area
+      - TOOL_TIER=${WORKSPACE_MCP_TOOL_TIER:-core}
+      - TOOLS=${WORKSPACE_MCP_TOOLS:-}
+
+      # Persist credentials (multi-account storage) and server state
+      - GOOGLE_MCP_CREDENTIALS_DIR=/data/credentials
+    volumes:
+      - workspace-mcp-data:/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+
   browser:
     image: coollabsio/openclaw-browser:latest
     # No port exposure needed — proxied via openclaw at /browser/
@@ -49,3 +89,4 @@ services:
 volumes:
   openclaw-data:
   browser-data:
+  workspace-mcp-data:
