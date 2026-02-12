@@ -11,9 +11,10 @@ RUN apt-get update \
 RUN pip install --no-cache-dir workspace-mcp
 
 ENV WORKSPACE_MCP_PORT=8000
+ENV PORT=8000
 
 EXPOSE 8000
 
 # Use a shell form so env vars like TOOL_TIER/TOOLS can expand into args (TOOLS splits on spaces).
-CMD sh -lc 'workspace-mcp --transport streamable-http --host 0.0.0.0 --port "${WORKSPACE_MCP_PORT:-8000}" ${TOOL_TIER:+--tool-tier "$TOOL_TIER"} ${TOOLS:+--tools $TOOLS}'
-
+# NOTE: The `workspace-mcp` CLI binds/ports via env (PORT/WORKSPACE_MCP_PORT); it doesn't accept --host/--port flags.
+CMD sh -lc 'workspace-mcp --transport streamable-http ${TOOL_TIER:+--tool-tier "$TOOL_TIER"} ${TOOLS:+--tools $TOOLS}'
