@@ -8,7 +8,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # Install the Google Workspace MCP server (PyPI: workspace-mcp)
-RUN pip install --no-cache-dir workspace-mcp
+# Pin to a known-good version that includes OAuth callback + well-known endpoints.
+RUN pip install --no-cache-dir "workspace-mcp==1.4.7"
 
 ENV WORKSPACE_MCP_PORT=8000
 ENV PORT=8000
