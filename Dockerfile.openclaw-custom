@@ -17,6 +17,9 @@ RUN curl -fsSL https://bun.sh/install | bash \
   && ln -sf /root/.bun/bin/bun /usr/local/bin/bun \
   && ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx
 
+# Provide `mcporter` CLI inside the container so agents can use it and it survives restarts.
+RUN npm i -g mcporter@0.7.3
+
 # Provide the `whisper` CLI for the built-in OpenAI Whisper skill.
 # This is a heavy dependency (pulls torch CPU wheels), but it makes the
 # "Missing: bin:whisper" requirement pass inside the container.
