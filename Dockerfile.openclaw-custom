@@ -1,9 +1,21 @@
 FROM coollabsio/openclaw:latest
 
+# OpenClaw's built-in skill installer expects `bun` to be available
+# (e.g. "Install mcporter (bun)"). The upstream runtime image does not ship bun,
+# so we add it in this derived image for Coolify deployments.
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://bun.sh/install | bash \
+  && ln -sf /root/.bun/bin/bun /usr/local/bin/bun \
+  && ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx
+
 # Coolify deployment cannot reliably bind-mount individual files from the repo
 # into the container. Bake the updated scripts into a derived image instead.
 COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh
 COPY scripts/configure.js /app/scripts/configure.js
 
 RUN chmod +x /app/scripts/entrypoint.sh
-
