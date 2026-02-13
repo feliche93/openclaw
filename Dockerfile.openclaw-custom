@@ -31,5 +31,6 @@ RUN python3 -m venv /opt/whisper-venv \
 # into the container. Bake the updated scripts into a derived image instead.
 COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh
 COPY scripts/configure.js /app/scripts/configure.js
+COPY config/mcporter.container.json /app/config/mcporter.json
 
 RUN chmod +x /app/scripts/entrypoint.sh

@@ -124,6 +124,16 @@ echo "[entrypoint] running openclaw doctor --fix..."
 cd /opt/openclaw/app
 openclaw doctor --fix 2>&1 || true
 
+# ── mcporter config bootstrap ────────────────────────────────────────────────
+# Coolify can't mount repo files into the container, so bake a template into the
+# image and copy it into the persisted state dir (once). Agents can then use:
+#   mcporter --config "$OPENCLAW_STATE_DIR/mcporter.json" list linear_fv_ventures --schema
+if [ -f "/app/config/mcporter.json" ] && [ ! -f "$STATE_DIR/mcporter.json" ]; then
+  cp /app/config/mcporter.json "$STATE_DIR/mcporter.json"
+  chmod 600 "$STATE_DIR/mcporter.json" || true
+  echo "[entrypoint] wrote mcporter config: $STATE_DIR/mcporter.json"
+fi
+
 # ── Tool/CLI sanity checks (show up in Coolify logs) ─────────────────────────
 if command -v mcporter >/dev/null 2>&1; then
   echo "[entrypoint] mcporter available: $(mcporter --version 2>/dev/null || echo 'version-check-failed')"

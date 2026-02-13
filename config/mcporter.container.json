@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "workspace-mcp": {
+      "description": "Google Workspace MCP (internal Docker, file-based creds)",
+      "baseUrl": "http://workspace-mcp:8000/mcp"
+    },
+    "linear_fv_ventures": {
+      "description": "Linear MCP (FV Ventures)",
+      "baseUrl": "https://mcp.linear.app/mcp",
+      "headers": {
+        "Authorization": "Bearer ${LINEAR_FV_VENTURES_API_KEY}"
+      }
+    },
+    "linear_fmd_labs": {
+      "description": "Linear MCP (FMD Labs)",
+      "baseUrl": "https://mcp.linear.app/mcp",
+      "headers": {
+        "Authorization": "Bearer ${LINEAR_FMD_LABS_API_KEY}"
+      }
+    }
+  }
+}
+
