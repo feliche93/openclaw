@@ -38,8 +38,10 @@ services:
       # gog (Google Workspace CLI) - optional. In Coolify, use a generated secret so
       # gog can persist refresh tokens using the encrypted file keyring backend.
       - GOG_KEYRING_BACKEND=${GOG_KEYRING_BACKEND:-file}
-      - SERVICE_BASE64_64_GOG_KEYRING_PASSWORD
-      - GOG_KEYRING_PASSWORD=${SERVICE_BASE64_64_GOG_KEYRING_PASSWORD}
+      # NOTE: Coolify's magic env var identifier parsing is stricter than typical env vars.
+      # Avoid underscores in the identifier to ensure generation works reliably.
+      - SERVICE_PASSWORD_64_GOGKEYRING
+      - GOG_KEYRING_PASSWORD=${SERVICE_PASSWORD_64_GOGKEYRING}
       # Hooks (optional)
       # - HOOKS_ENABLED=true
       # - HOOKS_TOKEN=my-hook-secret
