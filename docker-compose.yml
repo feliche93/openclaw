@@ -6,6 +6,12 @@ services:
     image: openclaw-custom:latest
     ports:
       - "8081:8080"
+    healthcheck:
+      # Use nginx readiness endpoint. Returns 503 until the gateway is up.
+      test: ["CMD-SHELL", "curl -fsS \"http://127.0.0.1:${PORT:-8080}/healthz\" >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
     environment:
       # Provider (at least one required)
       #- ANTHROPIC_API_KEY=sk-ant-...

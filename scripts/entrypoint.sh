@@ -328,7 +328,8 @@ server {
     }
 
     location @healthz_fallback {
-        return 200 '{"ok":true,"gateway":"starting"}';
+        # Readiness: fail healthcheck until gateway is actually accepting requests.
+        return 503 '{"ok":false,"gateway":"starting"}';
         default_type application/json;
     }
 
