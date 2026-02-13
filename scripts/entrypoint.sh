@@ -124,14 +124,39 @@ echo "[entrypoint] running openclaw doctor --fix..."
 cd /opt/openclaw/app
 openclaw doctor --fix 2>&1 || true
 
-# ── mcporter config bootstrap ────────────────────────────────────────────────
-# Coolify can't mount repo files into the container, so bake a template into the
-# image and copy it into the persisted state dir (once). Agents can then use:
-#   mcporter --config "$OPENCLAW_STATE_DIR/mcporter.json" list linear_fv_ventures --schema
-if [ -f "/app/config/mcporter.json" ] && [ ! -f "$STATE_DIR/mcporter.json" ]; then
-  cp /app/config/mcporter.json "$STATE_DIR/mcporter.json"
-  chmod 600 "$STATE_DIR/mcporter.json" || true
-  echo "[entrypoint] wrote mcporter config: $STATE_DIR/mcporter.json"
+# ── mcporter config bootstrap (single source of truth) ───────────────────────
+# Goal: keep exactly one persisted config file, but make it discoverable from
+# both common working dirs:
+#   - /data/.openclaw/mcporter.json (state)
+#   - /data/workspace/config/mcporter.json (workspace)
+#
+# We store the canonical file in the workspace so agents editing "from the repo"
+# naturally touch the right one, then link the state path to it.
+MCPORTER_WORKSPACE_DIR="$WORKSPACE_DIR/config"
+MCPORTER_WORKSPACE_PATH="$MCPORTER_WORKSPACE_DIR/mcporter.json"
+MCPORTER_STATE_PATH="$STATE_DIR/mcporter.json"
+
+mkdir -p "$MCPORTER_WORKSPACE_DIR"
+
+# If neither exists, seed from the baked template.
+if [ ! -f "$MCPORTER_WORKSPACE_PATH" ] && [ ! -f "$MCPORTER_STATE_PATH" ] && [ -f "/app/config/mcporter.json" ]; then
+  cp /app/config/mcporter.json "$MCPORTER_WORKSPACE_PATH"
+  chmod 600 "$MCPORTER_WORKSPACE_PATH" || true
+  echo "[entrypoint] seeded mcporter config: $MCPORTER_WORKSPACE_PATH"
+fi
+
+# If state exists but workspace doesn't, copy it into workspace.
+if [ -f "$MCPORTER_STATE_PATH" ] && [ ! -f "$MCPORTER_WORKSPACE_PATH" ]; then
+  cp "$MCPORTER_STATE_PATH" "$MCPORTER_WORKSPACE_PATH"
+  chmod 600 "$MCPORTER_WORKSPACE_PATH" || true
+  echo "[entrypoint] copied mcporter config to workspace: $MCPORTER_WORKSPACE_PATH"
+fi
+
+# Ensure the state path points at the workspace file.
+if [ -f "$MCPORTER_WORKSPACE_PATH" ]; then
+  rm -f "$MCPORTER_STATE_PATH"
+  ln -s "$MCPORTER_WORKSPACE_PATH" "$MCPORTER_STATE_PATH"
+  echo "[entrypoint] linked mcporter config: $MCPORTER_STATE_PATH -> $MCPORTER_WORKSPACE_PATH"
 fi
 
 # ── Tool/CLI sanity checks (show up in Coolify logs) ─────────────────────────
