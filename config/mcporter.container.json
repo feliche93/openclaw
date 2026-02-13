@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "workspace-mcp": {
-      "description": "Google Workspace MCP (internal Docker, file-based creds)",
-      "baseUrl": "http://workspace-mcp:8000/mcp"
-    },
     "linear_fv_ventures": {
       "description": "Linear MCP (FV Ventures)",
       "baseUrl": "https://mcp.linear.app/mcp",
@@ -20,4 +16,3 @@
     }
   }
 }
-

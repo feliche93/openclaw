@@ -29,9 +29,6 @@ services:
       # Enables anti-detection browser automation + cookie import tooling.
       - CAMOFOX_BROWSER_URL=http://camofox:9377
       - CAMOFOX_BROWSER_AUTOSTART=false
-      # Optional: proxy workspace-mcp through OpenClaw's nginx (see scripts/entrypoint.sh)
-      - WORKSPACE_MCP_PROXY_ENABLED=${WORKSPACE_MCP_PROXY_ENABLED:-false}
-      - WORKSPACE_MCP_PROXY_PATH=${WORKSPACE_MCP_PROXY_PATH:-/workspace-mcp/}
       # Coolify: generated secret (base64-ish random string). Local: set in your .env if using this compose directly.
       - SERVICE_BASE64_64_CAMOFOX
       - CAMOFOX_API_KEY=${SERVICE_BASE64_64_CAMOFOX}
@@ -52,46 +49,6 @@ services:
     depends_on:
       - browser
       - camofox
-    restart: unless-stopped
-
-  # Google Workspace MCP server (multi-account/multi-user capable).
-  #
-  # Internal DNS from openclaw container:
-  # - MCP endpoint: http://workspace-mcp:8000/mcp
-  #
-  # Tool limiting (best practice):
-  # - Start with TOOL_TIER=core (e.g. allows Gmail drafting, but not sending).
-  # - Optionally set WORKSPACE_MCP_TOOLS="gmail drive calendar" to only load select services.
-  workspace-mcp:
-    build:
-      context: ./workspace-mcp
-    environment:
-      # OAuth credentials (required for any real use)
-      - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
-      - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
-
-      # This deployment uses file-based stored credentials (no per-request bearer tokens).
-      # Seed accounts via /oauth2/authorize-handoff; discover them via list_google_accounts;
-      # pass `user_google_email` per tool call.
-
-      # If you put the MCP behind a reverse proxy (Coolify domain, Tailscale proxy, etc),
-      # set this so OAuth endpoints/redirects use the externally reachable URL.
-      # - WORKSPACE_EXTERNAL_URL=https://workspace-mcp.example.com
-      - WORKSPACE_EXTERNAL_URL=${WORKSPACE_EXTERNAL_URL:-}
-      - WORKSPACE_MCP_BASE_URI=${WORKSPACE_MCP_BASE_URI:-http://localhost}
-      - WORKSPACE_MCP_PORT=8000
-      - GOOGLE_OAUTH_REDIRECT_URI=${GOOGLE_OAUTH_REDIRECT_URI:-}
-
-      # Optional: enable/limit tool surface area
-      - TOOL_TIER=${WORKSPACE_MCP_TOOL_TIER:-core}
-      - TOOLS=${WORKSPACE_MCP_TOOLS:-}
-
-      # Persist credentials (multi-account storage) and server state
-      - GOOGLE_MCP_CREDENTIALS_DIR=/data/credentials
-    volumes:
-      - workspace-mcp-data:/data
-    expose:
-      - "8000"
     restart: unless-stopped
 
   browser:
@@ -121,4 +78,3 @@ services:
 volumes:
   openclaw-data:
   browser-data:
-  workspace-mcp-data:
