@@ -1,0 +1,9 @@
+FROM coollabsio/openclaw:latest
+
+# Coolify deployment cannot reliably bind-mount individual files from the repo
+# into the container. Bake the updated scripts into a derived image instead.
+COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh
+COPY scripts/configure.js /app/scripts/configure.js
+
+RUN chmod +x /app/scripts/entrypoint.sh
+
