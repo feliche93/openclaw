@@ -16,22 +16,12 @@ from core.tool_registry import (
 )
 from auth.scopes import set_enabled_tools as set_enabled_services_for_scopes
 
-# OAuth 2.1 discovery/proxy endpoints (not exposed by the stock `workspace-mcp` CLI)
-from auth.oauth_common_handlers import (
-    handle_oauth_authorize,
-    handle_proxy_token_exchange,
-    handle_oauth_protected_resource,
-    handle_oauth_authorization_server,
-    handle_oauth_client_config,
-    handle_oauth_register,
-)
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse
 
-# Reuse upstream callback logic, but present an access-token handoff page.
+# Reuse upstream callback logic, but present a simple "credentials saved" page.
 from auth.google_auth import handle_auth_callback, check_client_secrets
 from auth.google_auth import get_credential_store
-from auth.oauth21_session_store import get_oauth21_session_store
 from auth.scopes import get_current_scopes
 from auth.oauth_config import get_oauth_config
 from auth.credential_store import get_credential_store
@@ -48,6 +38,11 @@ def _split_services(raw: str) -> list[str]:
 
 
 def main() -> None:
+    # This deployment intentionally runs in "file-based credentials" mode only.
+    # Force OAuth2.1 bearer-token mode off even if someone accidentally sets env vars.
+    os.environ["MCP_ENABLE_OAUTH21"] = "false"
+    os.environ.setdefault("WORKSPACE_MCP_STATELESS_MODE", "false")
+
     # Match upstream behavior: read env after container starts.
     reload_oauth_config()
     configure_file_logging()
@@ -98,27 +93,15 @@ def main() -> None:
 
     filter_server_tools(server)
 
-    # Add OAuth 2.1 discovery/proxy endpoints expected by MCP OAuth flows.
-    @server.custom_route("/.well-known/oauth-protected-resource", methods=["GET", "OPTIONS"])
-    async def oauth_protected_resource(request: Request):
-        return await handle_oauth_protected_resource(request)
-
-    @server.custom_route("/.well-known/oauth-authorization-server", methods=["GET", "OPTIONS"])
-    async def oauth_authorization_server(request: Request):
-        return await handle_oauth_authorization_server(request)
-
-    @server.custom_route("/.well-known/oauth-client", methods=["GET", "OPTIONS"])
-    async def oauth_client_config(request: Request):
-        return await handle_oauth_client_config(request)
-
     @server.custom_route("/oauth2/authorize-handoff", methods=["GET"])
     async def oauth_authorize_handoff(request: Request):
         """
         Convenience endpoint for humans: open in a browser, finish Google consent,
-        land on /oauth2callback-handoff which shows the short-lived access token.
+        then land on /oauth2callback-handoff which persists refreshable credentials
+        into the server's file-based credential store.
 
-        We avoid /oauth2/authorize because FastMCP's RemoteAuthProvider may already
-        register it; route ordering would make overriding unreliable.
+        This is NOT an MCP OAuth2.1 flow. It is only used to seed credentials so
+        OpenClaw (and other internal callers) can invoke tools without bearer tokens.
         """
         params = dict(request.query_params)
 
@@ -143,21 +126,11 @@ def main() -> None:
         google_auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
         return RedirectResponse(url=google_auth_url, status_code=302)
 
-    @server.custom_route("/oauth2/token", methods=["POST", "OPTIONS"])
-    async def oauth_token(request: Request):
-        return await handle_proxy_token_exchange(request)
-
-    @server.custom_route("/oauth2/register", methods=["POST", "OPTIONS"])
-    async def oauth_register(request: Request):
-        return await handle_oauth_register(request)
-
     @server.custom_route("/oauth2callback-handoff", methods=["GET"])
     async def oauth2_callback_handoff(request: Request) -> HTMLResponse:
         """
-        Browser-based auth flow that returns an access token for pasting into an agent.
-
-        This is intentionally *not* the default /oauth2callback route shipped in the
-        upstream server to avoid route conflicts and keep the stock UX intact.
+        Browser-based auth flow that seeds refreshable credentials in the server's
+        credential store and shows a short confirmation page.
         """
         state = request.query_params.get("state")
         code = request.query_params.get("code")
@@ -193,24 +166,6 @@ def main() -> None:
             logger.error(f"Error processing OAuth callback handoff: {e}", exc_info=True)
             return HTMLResponse(content=f"<pre>{html.escape(str(e))}</pre>", status_code=500)
 
-        # Store in OAuth 2.1 session store so /mcp can accept it.
-        try:
-            store = get_oauth21_session_store()
-            store.store_session(
-                user_email=verified_user_id,
-                access_token=credentials.token,
-                refresh_token=credentials.refresh_token,
-                token_uri=credentials.token_uri,
-                client_id=credentials.client_id,
-                client_secret=credentials.client_secret,
-                scopes=credentials.scopes,
-                expiry=credentials.expiry,
-                session_id=f"google-{state}",
-                mcp_session_id=None,
-            )
-        except Exception as e:
-            logger.error(f"Failed to store OAuth 2.1 session for handoff: {e}", exc_info=True)
-
         # Also persist to the file-based credential store (refreshable) when enabled.
         # This enables "server-side" usage (e.g. OpenClaw calling workspace-mcp internally)
         # without requiring a per-request OAuth browser flow.
@@ -225,11 +180,9 @@ def main() -> None:
             except Exception as e:
                 logger.error(f"Failed to persist Google credentials for handoff: {e}", exc_info=True)
 
-        # Display only the *access token*; do not display refresh_token.
-        token = credentials.token or ""
-        token_safe = html.escape(token)
         user_safe = html.escape(verified_user_id or "")
-        mcp_url = f"{base_url}/mcp"
+        proxied_mcp_url = f"{base_url}/mcp"
+        internal_mcp_url = "http://workspace-mcp:8000/mcp"
 
         content = f"""<!doctype html>
 <html>
@@ -251,21 +204,14 @@ def main() -> None:
     </style>
   </head>
   <body>
-    <h1>Workspace MCP access token</h1>
+    <h1>Workspace MCP connected</h1>
     <div class="note">Authenticated as <b>{user_safe}</b>.</div>
     <div class="warn">
-      <b>Security:</b> This is a short-lived Google access token. Share it only with trusted agents.
-      When it expires, re-run the browser flow to get a new token.
+      <b>Success:</b> Credentials were saved on the server (refreshable). You can close this page.
     </div>
-    <h2 style="margin-top: 18px; font-size: 16px;">Token</h2>
-    <div class="row">
-      <button onclick="navigator.clipboard.writeText(document.getElementById('tok').innerText)">Copy token</button>
-      <button onclick="navigator.clipboard.writeText(document.getElementById('curl').innerText)">Copy curl</button>
-    </div>
-    <pre id="tok">{token_safe}</pre>
-    <h2 style="margin-top: 18px; font-size: 16px;">Test</h2>
-    <pre id="curl">curl -H 'Authorization: Bearer {token_safe}' '{html.escape(mcp_url)}'</pre>
-    <div class="small">MCP endpoint: <code>{html.escape(mcp_url)}</code></div>
+    <h2 style="margin-top: 18px; font-size: 16px;">Endpoints</h2>
+    <div class="small">Proxied MCP endpoint (via OpenClaw nginx): <code>{html.escape(proxied_mcp_url)}</code></div>
+    <div class="small">Internal MCP endpoint (Docker DNS): <code>{html.escape(internal_mcp_url)}</code></div>
   </body>
 </html>
 """
