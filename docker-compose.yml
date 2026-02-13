@@ -29,6 +29,9 @@ services:
       # Enables anti-detection browser automation + cookie import tooling.
       - CAMOFOX_BROWSER_URL=http://camofox:9377
       - CAMOFOX_BROWSER_AUTOSTART=false
+      # Optional: proxy workspace-mcp through OpenClaw's nginx (see scripts/entrypoint.sh)
+      - WORKSPACE_MCP_PROXY_ENABLED=${WORKSPACE_MCP_PROXY_ENABLED:-false}
+      - WORKSPACE_MCP_PROXY_PATH=${WORKSPACE_MCP_PROXY_PATH:-/workspace-mcp/}
       # Coolify: generated secret (base64-ish random string). Local: set in your .env if using this compose directly.
       - SERVICE_BASE64_64_CAMOFOX
       - CAMOFOX_API_KEY=${SERVICE_BASE64_64_CAMOFOX}
