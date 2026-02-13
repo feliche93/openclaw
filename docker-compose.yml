@@ -1,6 +1,9 @@
 services:
   openclaw:
-    image: coollabsio/openclaw:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.openclaw-custom
+    image: openclaw-custom:latest
     ports:
       - "8081:8080"
     environment:
@@ -36,9 +39,6 @@ services:
       - openclaw-data:/data
       # Custom JSON config for proxy/network tuning (merged with persisted config and env vars)
       - ./openclaw.custom.json:/app/config/openclaw.json:ro
-      # Override image scripts so we can add env-var wiring + plugin bootstrapping
-      - ./scripts/entrypoint.sh:/app/scripts/entrypoint.sh:ro
-      - ./scripts/configure.js:/app/scripts/configure.js:ro
     depends_on:
       - browser
       - camofox
