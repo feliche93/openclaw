@@ -34,6 +34,7 @@ from auth.google_auth import get_credential_store
 from auth.oauth21_session_store import get_oauth21_session_store
 from auth.scopes import get_current_scopes
 from auth.oauth_config import get_oauth_config
+from auth.credential_store import get_credential_store
 
 
 logging.basicConfig(level=logging.INFO)
@@ -269,6 +270,23 @@ def main() -> None:
 </html>
 """
         return HTMLResponse(content=content, status_code=200)
+
+    @server.tool()
+    async def list_google_accounts() -> list[str]:
+        """
+        List Google accounts that have stored credentials on this MCP server.
+
+        Use this from OpenClaw to discover which `user_google_email` values are available.
+        """
+        if is_stateless_mode():
+            # In stateless mode we avoid filesystem credential storage.
+            return []
+        try:
+            store = get_credential_store()
+            return store.list_users()
+        except Exception as e:
+            logger.error(f"Failed to list credentialed users: {e}", exc_info=True)
+            return []
 
     port = int(os.getenv("PORT", os.getenv("WORKSPACE_MCP_PORT", "8000")))
     server.run(transport="streamable-http", host="0.0.0.0", port=port)

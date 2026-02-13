@@ -63,11 +63,12 @@ services:
       - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
       - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
 
-      # Multi-user bearer token auth (OAuth 2.1). Turn off to use legacy auth.
+      # OAuth 2.1 multi-user bearer-token auth. Turn off to use file-based credentials.
       - MCP_ENABLE_OAUTH21=${MCP_ENABLE_OAUTH21:-true}
       - WORKSPACE_MCP_STATELESS_MODE=${WORKSPACE_MCP_STATELESS_MODE:-false}
-      # Legacy (no bearer token) mode: set USER_GOOGLE_EMAIL to pick the default account
-      # whose credentials were persisted into /data/credentials.
+      # File-based credentials mode: optionally set USER_GOOGLE_EMAIL as the default account
+      # whose credentials were persisted into /data/credentials. If unset, callers should
+      # pass `user_google_email` per tool call (or call list_google_accounts first).
       - USER_GOOGLE_EMAIL=${USER_GOOGLE_EMAIL:-}
 
       # If you put the MCP behind a reverse proxy (Coolify domain, Tailscale proxy, etc),
