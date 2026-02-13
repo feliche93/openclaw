@@ -63,13 +63,9 @@ services:
       - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
       - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
 
-      # OAuth 2.1 multi-user bearer-token auth. Turn off to use file-based credentials.
-      - MCP_ENABLE_OAUTH21=${MCP_ENABLE_OAUTH21:-true}
-      - WORKSPACE_MCP_STATELESS_MODE=${WORKSPACE_MCP_STATELESS_MODE:-false}
-      # File-based credentials mode: optionally set USER_GOOGLE_EMAIL as the default account
-      # whose credentials were persisted into /data/credentials. If unset, callers should
-      # pass `user_google_email` per tool call (or call list_google_accounts first).
-      - USER_GOOGLE_EMAIL=${USER_GOOGLE_EMAIL:-}
+      # This deployment uses file-based stored credentials (no per-request bearer tokens).
+      # Seed accounts via /oauth2/authorize-handoff; discover them via list_google_accounts;
+      # pass `user_google_email` per tool call.
 
       # If you put the MCP behind a reverse proxy (Coolify domain, Tailscale proxy, etc),
       # set this so OAuth endpoints/redirects use the externally reachable URL.
