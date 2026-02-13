@@ -35,6 +35,11 @@ services:
       # Coolify: generated secret (base64-ish random string). Local: set in your .env if using this compose directly.
       - SERVICE_BASE64_64_CAMOFOX
       - CAMOFOX_API_KEY=${SERVICE_BASE64_64_CAMOFOX}
+      # gog (Google Workspace CLI) - optional. In Coolify, use a generated secret so
+      # gog can persist refresh tokens using the encrypted file keyring backend.
+      - GOG_KEYRING_BACKEND=${GOG_KEYRING_BACKEND:-file}
+      - SERVICE_BASE64_64_GOG_KEYRING_PASSWORD
+      - GOG_KEYRING_PASSWORD=${SERVICE_BASE64_64_GOG_KEYRING_PASSWORD}
       # Hooks (optional)
       # - HOOKS_ENABLED=true
       # - HOOKS_TOKEN=my-hook-secret
