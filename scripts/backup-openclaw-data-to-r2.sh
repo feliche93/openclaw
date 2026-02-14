@@ -6,6 +6,12 @@ set -euo pipefail
 # Intended to run INSIDE the OpenClaw container as a Coolify Scheduled Task.
 # This backs up the mounted /data volume (OpenClaw state + workspace) only.
 #
+# NOTE (Coolify + Infisical):
+# Coolify runs Scheduled Tasks via `docker exec`, which does NOT inherit the
+# environment injected by `infisical run ... /app/scripts/entrypoint.sh`.
+# To keep scheduled tasks working when secrets live only in Infisical, this
+# script can re-exec itself under `infisical run` when INFISICAL_* is configured.
+#
 # Required env:
 #   R2_ENDPOINT               e.g. https://<accountid>.r2.cloudflarestorage.com
 #   R2_BUCKET                 e.g. my-backups
@@ -24,6 +30,75 @@ set -euo pipefail
 die() { echo "[backup] ERROR: $*" >&2; exit 1; }
 
 command -v restic >/dev/null 2>&1 || die "restic not found (image must include it)"
+
+ensure_infisical_injection_if_needed() {
+  # If the required vars are already present, nothing to do.
+  if [ -n "${R2_ENDPOINT:-}" ] \
+    && [ -n "${R2_BUCKET:-}" ] \
+    && [ -n "${R2_ACCESS_KEY_ID:-}" ] \
+    && [ -n "${R2_SECRET_ACCESS_KEY:-}" ] \
+    && [ -n "${RESTIC_PASSWORD:-}" ]; then
+    return 0
+  fi
+
+  # Avoid loops: if we already wrapped with Infisical and vars are still missing, fail hard.
+  if [ -n "${BACKUP_INFISICAL_WRAPPED:-}" ]; then
+    return 0
+  fi
+
+  # If Infisical isn't configured, just proceed to the normal validation errors below.
+  if [ -z "${INFISICAL_PROJECT_ID:-}" ]; then
+    return 0
+  fi
+
+  command -v infisical >/dev/null 2>&1 || return 0
+
+  INFISICAL_API_URL="${INFISICAL_API_URL:-https://app.infisical.com/api}"
+  INFISICAL_ENV_EFFECTIVE="${INFISICAL_ENV:-prod}"
+  INFISICAL_PATH_EFFECTIVE="${INFISICAL_PATH:-/}"
+
+  INFISICAL_RUNTIME_TOKEN=""
+  if [ -n "${INFISICAL_TOKEN:-}" ]; then
+    INFISICAL_RUNTIME_TOKEN="$INFISICAL_TOKEN"
+  elif [ -n "${INFISICAL_CLIENT_ID:-}" ] && [ -n "${INFISICAL_CLIENT_SECRET:-}" ]; then
+    # Mirror entrypoint.sh: fetch access token via Universal Auth.
+    INFISICAL_RUNTIME_TOKEN="$(node -e "
+      const api = (process.env.INFISICAL_API_URL || 'https://app.infisical.com/api').replace(/\\/+$/,'');
+      const clientId = process.env.INFISICAL_CLIENT_ID;
+      const clientSecret = process.env.INFISICAL_CLIENT_SECRET;
+      if (!clientId || !clientSecret) process.exit(2);
+      fetch(api + '/v1/auth/universal-auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ clientId, clientSecret })
+      }).then(async (res) => {
+        const txt = await res.text();
+        let j;
+        try { j = JSON.parse(txt); } catch { throw new Error('non-json response'); }
+        const tok = j && (j.accessToken || j.access_token || (j.data && j.data.accessToken));
+        if (!res.ok || !tok) process.exit(1);
+        process.stdout.write(tok);
+      }).catch(() => process.exit(1));
+    " 2>/dev/null || true)"
+  fi
+
+  if [ -z "${INFISICAL_RUNTIME_TOKEN:-}" ]; then
+    # Fall through to the normal "R2_* required" validation for a clear error.
+    return 0
+  fi
+
+  echo "[backup] infisical: injecting secrets for scheduled task (env=$INFISICAL_ENV_EFFECTIVE path=$INFISICAL_PATH_EFFECTIVE)"
+  exec infisical run \
+    --domain "$INFISICAL_API_URL" \
+    --token "$INFISICAL_RUNTIME_TOKEN" \
+    --projectId "$INFISICAL_PROJECT_ID" \
+    --env "$INFISICAL_ENV_EFFECTIVE" \
+    --path "$INFISICAL_PATH_EFFECTIVE" \
+    -- env BACKUP_INFISICAL_WRAPPED=1 \
+    /app/scripts/backup-openclaw-data-to-r2.sh
+}
+
+ensure_infisical_injection_if_needed
 
 R2_ENDPOINT="${R2_ENDPOINT:-}"
 R2_BUCKET="${R2_BUCKET:-}"
