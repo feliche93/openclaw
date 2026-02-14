@@ -20,7 +20,7 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=12 \
   CMD curl -fsS "http://localhost:${PORT:-8080}/healthz" >/dev/null || exit 1
 
 # Infisical CLI (used for runtime secret injection via INFISICAL_TOKEN)
-ARG INFISICAL_VERSION=0.43.48
+# Note: intentionally unpinned so each image build installs the latest release.
 RUN set -eux; \
   arch="$(uname -m)"; \
   case "$arch" in \
@@ -28,7 +28,9 @@ RUN set -eux; \
     aarch64|arm64) go_arch="arm64" ;; \
     *) echo "Unsupported architecture for infisical: $arch" >&2; exit 1 ;; \
   esac; \
-  url="https://github.com/Infisical/cli/releases/download/v${INFISICAL_VERSION}/cli_${INFISICAL_VERSION}_linux_${go_arch}.tar.gz"; \
+  version="$(node -e 'fetch("https://api.github.com/repos/Infisical/cli/releases/latest",{headers:{"User-Agent":"openclaw-coolify"}}).then(r=>r.json()).then(j=>process.stdout.write(String(j.tag_name||"").replace(/^v/,""))).catch(e=>{console.error(e);process.exit(1);})')"; \
+  if [ -z "$version" ]; then echo "Failed to resolve latest Infisical CLI version" >&2; exit 1; fi; \
+  url="https://github.com/Infisical/cli/releases/download/v${version}/cli_${version}_linux_${go_arch}.tar.gz"; \
   curl -fsSL "$url" -o /tmp/infisical.tgz; \
   tar -xzf /tmp/infisical.tgz -C /tmp infisical; \
   install -m 0755 /tmp/infisical /usr/local/bin/infisical; \
@@ -58,6 +60,14 @@ RUN set -eux; \
 
 # Provide `mcporter` CLI inside the container so agents can use it and it survives restarts.
 RUN npm i -g mcporter@0.7.3
+
+# OpenClaw ships a bundled "coding-agent" skill that can drive Codex CLI, but the
+# upstream image doesn't include the `codex` binary. Install it so the skill is
+# eligible inside Coolify deployments.
+#
+# Note: intentionally unpinned so each image build installs the latest Codex CLI.
+RUN npm i -g @openai/codex \
+  && codex --version
 
 # Provide the `whisper` CLI for the built-in OpenAI Whisper skill.
 # This is a heavy dependency (pulls torch CPU wheels), but it makes the
