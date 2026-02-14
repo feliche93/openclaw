@@ -119,6 +119,19 @@ Multiple providers can be set simultaneously. Priority for primary model: Anthro
 
 If a provider env var is removed, that provider section is cleaned from `openclaw.json` on next start.
 
+### Infisical (optional; recommended for Coolify)
+
+If Infisical credentials are set, the container entrypoints re-exec themselves under `infisical run` and inject secrets at runtime. This lets you keep almost all application secrets out of Coolify env vars.
+
+| Variable | Default | Description |
+|---|---|---|
+| `INFISICAL_TOKEN` | | Infisical service token (if your Infisical supports service tokens). |
+| `INFISICAL_PROJECT_ID` | | Infisical project ID. |
+| `INFISICAL_ENV` | `prod` | Infisical environment slug (e.g. `dev`, `staging`, `prod`). |
+| `INFISICAL_PATH` | `/` | Secrets folder path. |
+| `INFISICAL_CLIENT_ID` | | Universal Auth client ID (machine identity). Used when `INFISICAL_TOKEN` is not set. |
+| `INFISICAL_CLIENT_SECRET` | | Universal Auth client secret (machine identity). Used when `INFISICAL_TOKEN` is not set. |
+
 ### Deepgram (audio transcription, optional)
 
 | Variable | Description |
@@ -204,7 +217,7 @@ Mount a persistent volume at the sidecar's profile directory (`/home/kasm-user`)
 
 Run the `camofox` service in the same `docker-compose.yml` as OpenClaw without publishing its port (internal-only), and configure the `camofox-browser` OpenClaw plugin to talk to it.
 
-When deploying with Coolify, this repo's `docker-compose.yml` uses a Coolify "magic environment variable" (`SERVICE_BASE64_64_CAMOFOX`) to auto-generate a stable secret and wires it into `CAMOFOX_API_KEY` for both containers.
+You can provide the shared cookie-import key via `CAMOFOX_API_KEY` directly, or store it in Infisical (recommended) and let both the `openclaw` and `camofox` containers inject it at runtime using `INFISICAL_*`.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -212,7 +225,7 @@ When deploying with Coolify, this repo's `docker-compose.yml` uses a Coolify "ma
 | `CAMOFOX_BROWSER_AUTOSTART` | `false` | Set to `false` when the server runs as its own container (plugin must not spawn it). |
 | `CAMOFOX_BROWSER_PORT` | | Server port (used only if `CAMOFOX_BROWSER_URL` is not set). |
 | `CAMOFOX_API_KEY` | | Shared API key required to enable cookie import on the server. Must be set on both `openclaw` and `camofox` services. |
-| `SERVICE_BASE64_64_CAMOFOX` | *(Coolify)* | Coolify-generated secret used by `docker-compose.yml` to populate `CAMOFOX_API_KEY` automatically. |
+| `SERVICE_BASE64_64_CAMOFOX` | | Optional alias: if `CAMOFOX_API_KEY` is unset and this is set, the entrypoints map it to `CAMOFOX_API_KEY`. |
 
 ### Channels (optional)
 

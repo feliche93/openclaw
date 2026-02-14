@@ -8,6 +8,42 @@ GATEWAY_PORT="${OPENCLAW_GATEWAY_PORT:-18789}"
 echo "[entrypoint] state dir: $STATE_DIR"
 echo "[entrypoint] workspace dir: $WORKSPACE_DIR"
 
+# ── Optional: inject secrets from Infisical (runtime) ────────────────────────
+# If Infisical credentials are provided, re-exec the entrypoint under
+# `infisical run` so all subsequent checks + configure.js see the injected env.
+#
+# Supported auth inputs:
+# - Service token: INFISICAL_TOKEN + INFISICAL_PROJECT_ID
+# - Universal Auth: INFISICAL_CLIENT_ID + INFISICAL_CLIENT_SECRET + INFISICAL_PROJECT_ID
+#
+# This keeps Coolify env vars minimal: only INFISICAL_* needs to live in Coolify.
+if [ -n "${INFISICAL_PROJECT_ID:-}" ] && [ -z "${INFISICAL_INJECTED:-}" ]; then
+  INFISICAL_RUNTIME_TOKEN=""
+  if [ -n "${INFISICAL_TOKEN:-}" ]; then
+    INFISICAL_RUNTIME_TOKEN="$INFISICAL_TOKEN"
+  elif [ -n "${INFISICAL_CLIENT_ID:-}" ] && [ -n "${INFISICAL_CLIENT_SECRET:-}" ]; then
+    echo "[entrypoint] infisical: acquiring access token (universal-auth)"
+    INFISICAL_RUNTIME_TOKEN="$(infisical login \
+      --method=universal-auth \
+      --client-id "$INFISICAL_CLIENT_ID" \
+      --client-secret "$INFISICAL_CLIENT_SECRET" \
+      --plain --silent)"
+  fi
+
+  if [ -n "$INFISICAL_RUNTIME_TOKEN" ]; then
+    export INFISICAL_INJECTED=1
+    INFISICAL_ENV_EFFECTIVE="${INFISICAL_ENV:-prod}"
+    INFISICAL_PATH_EFFECTIVE="${INFISICAL_PATH:-/}"
+    echo "[entrypoint] infisical: injecting secrets (env=$INFISICAL_ENV_EFFECTIVE path=$INFISICAL_PATH_EFFECTIVE)"
+    exec infisical run \
+      --token "$INFISICAL_RUNTIME_TOKEN" \
+      --projectId "$INFISICAL_PROJECT_ID" \
+      --env "$INFISICAL_ENV_EFFECTIVE" \
+      --path "$INFISICAL_PATH_EFFECTIVE" \
+      -- /app/scripts/entrypoint.sh
+  fi
+fi
+
 # ── Coolify magic env var aliases (runtime-safe) ─────────────────────────────
 # In Coolify Compose, "magic" SERVICE_* vars are reliably injected into the
 # container env, but Docker Compose var substitution (VAR=${SERVICE_*}) can be

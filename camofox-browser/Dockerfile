@@ -4,6 +4,8 @@ FROM node:20-slim
 # Update these when upgrading Camoufox
 ARG CAMOUFOX_VERSION=135.0.1
 ARG CAMOUFOX_RELEASE=beta.24
+# Infisical CLI (optional; used for runtime secret injection via INFISICAL_TOKEN)
+ARG INFISICAL_VERSION=0.43.48
 # BuildKit sets TARGETARCH (amd64/arm64). Default to amd64 naming.
 ARG TARGETARCH
 ARG CAMOUFOX_URL=
@@ -32,8 +34,25 @@ RUN apt-get update && apt-get install -y \
     # Utils
     ca-certificates \
     curl \
+    tar \
     unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Infisical CLI (for optional runtime env injection)
+RUN set -eux; \
+    arch="${TARGETARCH:-}"; \
+    [ -z "$arch" ] && arch="$(uname -m)" || true; \
+    case "$arch" in \
+      amd64|x86_64) go_arch="amd64" ;; \
+      arm64|aarch64) go_arch="arm64" ;; \
+      *) echo "Unsupported architecture for infisical: $arch" >&2; exit 1 ;; \
+    esac; \
+    url="https://github.com/Infisical/cli/releases/download/v${INFISICAL_VERSION}/cli_${INFISICAL_VERSION}_linux_${go_arch}.tar.gz"; \
+    curl -fsSL "$url" -o /tmp/infisical.tgz; \
+    tar -xzf /tmp/infisical.tgz -C /tmp infisical; \
+    install -m 0755 /tmp/infisical /usr/local/bin/infisical; \
+    rm -f /tmp/infisical.tgz /tmp/infisical; \
+    infisical --version
 
 # Pre-bake Camoufox browser binary into image
 # This avoids downloading at runtime and pins the version
@@ -58,10 +77,13 @@ RUN npm install --production
 
 COPY server.js ./
 COPY lib/ ./lib/
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
 ENV NODE_ENV=production
 ENV CAMOFOX_PORT=3000
 
 EXPOSE 3000
 
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["node", "server.js"]
