@@ -84,6 +84,23 @@ Jobs:
 
 Triggers: `schedule: '0 */6 * * *'` + `workflow_dispatch` (version, force_rebuild, skip_latest_tag).
 
+## Coolify Scheduled Task: Deploy Only When New Upstream Version Exists
+
+If you deploy this repo in Coolify and want to redeploy only when a newer
+`openclaw/openclaw` release exists, add a Coolify Scheduled Task that runs:
+
+```bash
+/app/scripts/redeploy-if-new-openclaw-release.sh
+```
+
+Required environment variables (recommend storing in Infisical and injecting at runtime):
+- `COOLIFY_API_TOKEN` (Coolify API token; Bearer)
+- `COOLIFY_RESOURCE_UUID` (the Coolify resource UUID you want to redeploy)
+
+Optional:
+- `COOLIFY_API_BASE` (defaults to `https://app.coolify.io`; set for self-hosted)
+- `COOLIFY_FORCE` (`true`/`false`, defaults to `false`)
+
 ## Secrets needed (repo settings)
 
 - `DOCKERHUB_USERNAME` — Docker Hub username
