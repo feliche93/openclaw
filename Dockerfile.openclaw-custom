@@ -13,6 +13,22 @@ RUN apt-get update \
     python3-venv \
   && rm -rf /var/lib/apt/lists/*
 
+# Infisical CLI (used for runtime secret injection via INFISICAL_TOKEN)
+ARG INFISICAL_VERSION=0.43.48
+RUN set -eux; \
+  arch="$(uname -m)"; \
+  case "$arch" in \
+    x86_64) go_arch="amd64" ;; \
+    aarch64|arm64) go_arch="arm64" ;; \
+    *) echo "Unsupported architecture for infisical: $arch" >&2; exit 1 ;; \
+  esac; \
+  url="https://github.com/Infisical/cli/releases/download/v${INFISICAL_VERSION}/cli_${INFISICAL_VERSION}_linux_${go_arch}.tar.gz"; \
+  curl -fsSL "$url" -o /tmp/infisical.tgz; \
+  tar -xzf /tmp/infisical.tgz -C /tmp infisical; \
+  install -m 0755 /tmp/infisical /usr/local/bin/infisical; \
+  rm -f /tmp/infisical.tgz /tmp/infisical; \
+  infisical --version
+
 RUN curl -fsSL https://bun.sh/install | bash \
   && ln -sf /root/.bun/bin/bun /usr/local/bin/bun \
   && ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx

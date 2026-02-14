@@ -13,16 +13,23 @@ services:
       timeout: 3s
       retries: 12
     environment:
+      # Infisical (recommended for Coolify): if set, entrypoint re-execs under
+      # `infisical run` so secrets are injected at runtime.
+      - INFISICAL_TOKEN
+      - INFISICAL_PROJECT_ID
+      - INFISICAL_ENV
+      - INFISICAL_PATH
+
       # Provider (at least one required)
       #- ANTHROPIC_API_KEY=sk-ant-...
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      # Set OPENCLAW_PRIMARY_MODEL in Coolify if you want to pin a specific model.
-      # Default below keeps it on Gemini if no override is provided.
-      - OPENCLAW_PRIMARY_MODEL=${OPENCLAW_PRIMARY_MODEL:-gemini/gemini-2.5-pro}
-      # Auth
-      - AUTH_USERNAME=${AUTH_USERNAME}
-      - AUTH_PASSWORD=${AUTH_PASSWORD}
-      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
+      # If you're not using Infisical, set provider keys directly as env vars.
+      # - GEMINI_API_KEY=...
+      #
+      # Other runtime secrets (if not using Infisical):
+      # - OPENCLAW_GATEWAY_TOKEN=...
+      # - AUTH_USERNAME=admin
+      # - AUTH_PASSWORD=...
+      # - OPENCLAW_PRIMARY_MODEL=...
       # Persisted state/workspace paths (align runtime + interactive CLI sessions)
       - OPENCLAW_STATE_DIR=/data/.openclaw
       - OPENCLAW_WORKSPACE_DIR=/data/workspace
@@ -35,16 +42,6 @@ services:
       # Enables anti-detection browser automation + cookie import tooling.
       - CAMOFOX_BROWSER_URL=http://camofox:9377
       - CAMOFOX_BROWSER_AUTOSTART=false
-      # Coolify: generated secret (base64-ish random string). Local: set in your .env if using this compose directly.
-      - SERVICE_BASE64_64_CAMOFOX
-      - CAMOFOX_API_KEY=${SERVICE_BASE64_64_CAMOFOX}
-      # gog (Google Workspace CLI) - optional. In Coolify, use a generated secret so
-      # gog can persist refresh tokens using the encrypted file keyring backend.
-      - GOG_KEYRING_BACKEND=${GOG_KEYRING_BACKEND:-file}
-      # NOTE: Coolify's magic env var identifier parsing is stricter than typical env vars.
-      # Avoid underscores in the identifier to ensure generation works reliably.
-      - SERVICE_PASSWORD_64_GOGKEYRING
-      - GOG_KEYRING_PASSWORD=${SERVICE_PASSWORD_64_GOGKEYRING}
       # Hooks (optional)
       # - HOOKS_ENABLED=true
       # - HOOKS_TOKEN=my-hook-secret
@@ -76,8 +73,12 @@ services:
     # Internal-only: no ports mapping. OpenClaw reaches it via Docker DNS: http://camofox:9377
     environment:
       - CAMOFOX_PORT=9377
-      - SERVICE_BASE64_64_CAMOFOX
-      - CAMOFOX_API_KEY=${SERVICE_BASE64_64_CAMOFOX}
+      # Infisical (recommended): camofox-browser entrypoint re-execs under
+      # `infisical run` so the cookie import key can come from Infisical too.
+      - INFISICAL_TOKEN
+      - INFISICAL_PROJECT_ID
+      - INFISICAL_ENV
+      - INFISICAL_PATH
     shm_size: 2g
     restart: unless-stopped
 
