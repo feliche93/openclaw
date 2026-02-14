@@ -93,6 +93,26 @@ If you deploy this repo in Coolify and want to redeploy only when a newer
 /app/scripts/redeploy-if-new-openclaw-release.sh
 ```
 
+## Backups (R2): OpenClaw `/data` Volume Only
+
+If you want to back up OpenClaw state/workspace persisted in `/data` (but not the browser profile),
+you can add a Coolify Scheduled Task on the **openclaw** application that runs:
+
+```bash
+/app/scripts/backup-openclaw-data-to-r2.sh
+```
+
+Required environment variables (store them in Infisical if possible):
+- `R2_ENDPOINT` (Cloudflare R2 S3 endpoint, e.g. `https://<accountid>.r2.cloudflarestorage.com`)
+- `R2_BUCKET`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `RESTIC_PASSWORD` (restic repository encryption password; required to restore)
+
+Optional:
+- `R2_PREFIX` (defaults to `coolify/openclaw-data/<COOLIFY_RESOURCE_UUID>`)
+- `KEEP_DAILY`/`KEEP_WEEKLY`/`KEEP_MONTHLY` (defaults: 7/4/6)
+
 Required environment variables (recommend storing in Infisical and injecting at runtime):
 - `COOLIFY_API_TOKEN` (Coolify API token; Bearer)
 - `COOLIFY_RESOURCE_UUID` (the Coolify resource UUID you want to redeploy)
