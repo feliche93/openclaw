@@ -87,6 +87,11 @@ services:
       retries: 12
     environment:
       - CAMOFOX_PORT=9377
+      # Optional residential/datacenter proxy for Camoufox traffic
+      - PROXY_HOST=${PROXY_HOST:-}
+      - PROXY_PORT=${PROXY_PORT:-}
+      - PROXY_USERNAME=${PROXY_USERNAME:-}
+      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
       # Infisical (recommended): camofox-browser entrypoint re-execs under
       # `infisical run` so the cookie import key can come from Infisical too.
       - INFISICAL_TOKEN

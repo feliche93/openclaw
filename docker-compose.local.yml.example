@@ -48,10 +48,14 @@ services:
     environment:
       - CAMOFOX_PORT=9377
       - CAMOFOX_API_KEY=${CAMOFOX_API_KEY}
+      # Optional residential/datacenter proxy for Camoufox traffic
+      - PROXY_HOST=${PROXY_HOST:-}
+      - PROXY_PORT=${PROXY_PORT:-}
+      - PROXY_USERNAME=${PROXY_USERNAME:-}
+      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
     shm_size: 2g
     restart: unless-stopped
 
 volumes:
   openclaw-data:
   browser-data:
-
