@@ -63,6 +63,7 @@ Two-layer Docker build:
 .github/workflows/build.yml         — CI on push/PR (build only, no push)
 Dockerfile.base                     — multi-stage: build openclaw from source → slim runtime
 Dockerfile                          — FROM base, add nginx + config scripts + entrypoint
+Dockerfile.openclaw-custom          — Coolify-oriented derived image with extra CLIs for built-in skills/tools
 scripts/configure.js                — reads env vars, writes/patches openclaw.json
 scripts/entrypoint.sh               — container entrypoint: configure → nginx → gateway
 scripts/smoke.js                    — smoke test (openclaw --version)
@@ -421,3 +422,4 @@ Arrays are replaced, not concatenated. Provider API keys are always read from en
 - Openclaw uses CalVer: `v2026.1.29` (roughly daily releases). Detected via GitHub Releases API.
 - Using native `ubuntu-24.04-arm` runners for arm64 builds (same pattern as coollabsio/pocketbase).
 - Config is environment-driven: set env vars → restart container → config updates automatically.
+- `Dockerfile.openclaw-custom` preinstalls `mcporter`, `codex`, `whisper`, and `himalaya` so matching built-in skills are not blocked by missing binaries.

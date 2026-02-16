@@ -93,6 +93,24 @@ RUN python3 -m venv /opt/whisper-venv \
   && /opt/whisper-venv/bin/pip install --no-cache-dir --prefer-binary openai-whisper \
   && ln -sf /opt/whisper-venv/bin/whisper /usr/local/bin/whisper
 
+# Provide the `himalaya` CLI for the built-in email skill.
+# Note: intentionally unpinned so each image build installs the latest release.
+RUN set -eux; \
+  arch="$(uname -m)"; \
+  case "$arch" in \
+    x86_64) himalaya_arch="x86_64" ;; \
+    aarch64|arm64) himalaya_arch="aarch64" ;; \
+    *) echo "Unsupported architecture for himalaya: $arch" >&2; exit 1 ;; \
+  esac; \
+  version="$(node -e 'fetch("https://api.github.com/repos/pimalaya/himalaya/releases/latest",{headers:{"User-Agent":"openclaw-coolify"}}).then(r=>r.json()).then(j=>process.stdout.write(String(j.tag_name||"").replace(/^v/,""))).catch(e=>{console.error(e);process.exit(1);})')"; \
+  if [ -z "$version" ]; then echo "Failed to resolve latest Himalaya version" >&2; exit 1; fi; \
+  url="https://github.com/pimalaya/himalaya/releases/download/v${version}/himalaya.${himalaya_arch}-linux.tgz"; \
+  curl -fsSL "$url" -o /tmp/himalaya.tgz; \
+  tar -xzf /tmp/himalaya.tgz -C /tmp himalaya; \
+  install -m 0755 /tmp/himalaya /usr/local/bin/himalaya; \
+  rm -f /tmp/himalaya.tgz /tmp/himalaya; \
+  himalaya --version
+
 # Coolify deployment cannot reliably bind-mount individual files from the repo
 # into the container. Bake the updated scripts into a derived image instead.
 COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh
