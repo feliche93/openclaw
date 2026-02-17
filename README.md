@@ -213,7 +213,8 @@ If Infisical credentials are set, the container entrypoints re-exec themselves u
 |---|---|---|
 | `OPENCLAW_GATEWAY_TOKEN` | *(auto-generated)* | Bearer token for gateway auth. Auto-generated and persisted to `<STATE_DIR>/gateway.token` if not set. |
 | `OPENCLAW_GATEWAY_PORT` | `18789` | Internal port the gateway binds to. |
-| `OPENCLAW_GATEWAY_BIND` | `loopback` | Gateway bind mode. `loopback` = 127.0.0.1 only (nginx proxies LAN traffic). `lan` = 0.0.0.0 (direct access, bypasses nginx auth). Also: `tailnet`, `auto`, `custom`. |
+| `OPENCLAW_GATEWAY_BIND` | `loopback` | Gateway bind mode. `loopback` = 127.0.0.1 only (nginx proxies LAN traffic). `lan` = 0.0.0.0 (direct access, bypasses nginx auth). Also: `tailnet`, `auto`, `custom`. **Guardrail:** this image refuses `lan` unless `OPENCLAW_ALLOW_LAN_BIND=true` is set. |
+| `OPENCLAW_ALLOW_LAN_BIND` | *(none)* | Set to `true` to allow `OPENCLAW_GATEWAY_BIND=lan`. Unsafe unless you know your ingress/firewall setup. |
 | `OPENCLAW_STATE_DIR` | `/data/.openclaw` | Persistent state directory. Mount a volume here. |
 | `OPENCLAW_WORKSPACE_DIR` | `/data/workspace` | Workspace directory for openclaw projects. |
 | `OPENCLAW_CONFIG_PATH` | `<STATE_DIR>/openclaw.json` | Override path to the config file. |

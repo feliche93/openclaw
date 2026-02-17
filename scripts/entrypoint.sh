@@ -479,12 +479,21 @@ rm -f "$STATE_DIR/gateway.lock" 2>/dev/null || true
 # ── Start openclaw gateway ───────────────────────────────────────────────────
 echo "[entrypoint] starting openclaw gateway on port $GATEWAY_PORT..."
 
+GATEWAY_BIND="${OPENCLAW_GATEWAY_BIND:-loopback}"
+# Guardrail: binding the gateway to LAN can bypass the nginx/Cloudflare ingress
+# model if the port is ever exposed. Require an explicit override.
+if [ "$GATEWAY_BIND" = "lan" ] && [ "${OPENCLAW_ALLOW_LAN_BIND:-}" != "true" ]; then
+  echo "[entrypoint] ERROR: OPENCLAW_GATEWAY_BIND=lan is unsafe." >&2
+  echo "[entrypoint] Set OPENCLAW_ALLOW_LAN_BIND=true to proceed (or use OPENCLAW_GATEWAY_BIND=loopback)." >&2
+  exit 1
+fi
+
 GATEWAY_ARGS=(
   gateway
   --port "$GATEWAY_PORT"
   --verbose
   --allow-unconfigured
-  --bind "${OPENCLAW_GATEWAY_BIND:-loopback}"
+  --bind "$GATEWAY_BIND"
 )
 
 GATEWAY_ARGS+=(--token "$GATEWAY_TOKEN")
