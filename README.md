@@ -203,7 +203,8 @@ If Infisical credentials are set, the container entrypoints re-exec themselves u
 
 | Variable | Default | Description |
 |---|---|---|
-| `AUTH_PASSWORD` | *(none)* | If set, nginx enforces HTTP basic auth on all routes except `/healthz` and the hooks path (when hooks are enabled). If unset, no auth — gateway is open. |
+| `OPENCLAW_BASIC_AUTH` | `auto` | Basic auth mode for nginx. `auto` = enable only when `AUTH_PASSWORD` is set. `on` = require basic auth (errors if `AUTH_PASSWORD` unset). `off` = disable basic auth even if `AUTH_PASSWORD` is set (for Cloudflare Access, etc.). |
+| `AUTH_PASSWORD` | *(none)* | Basic auth password. Effective when `OPENCLAW_BASIC_AUTH=auto` (and set) or `OPENCLAW_BASIC_AUTH=on`. |
 | `AUTH_USERNAME` | `admin` | Username for basic auth. |
 
 ### Gateway

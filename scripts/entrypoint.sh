@@ -286,17 +286,48 @@ fi
 # ── Generate nginx config ────────────────────────────────────────────────────
 AUTH_PASSWORD="${AUTH_PASSWORD:-}"
 AUTH_USERNAME="${AUTH_USERNAME:-admin}"
+# OPENCLAW_BASIC_AUTH controls whether nginx enforces HTTP basic auth.
+# Values:
+# - auto (default): enable basic auth only when AUTH_PASSWORD is set
+# - on: require basic auth; error if AUTH_PASSWORD is missing
+# - off: disable basic auth even if AUTH_PASSWORD is set (for Cloudflare Access, etc.)
+OPENCLAW_BASIC_AUTH="${OPENCLAW_BASIC_AUTH:-auto}"
 NGINX_CONF="/etc/nginx/conf.d/openclaw.conf"
 
 AUTH_BLOCK=""
-if [ -n "$AUTH_PASSWORD" ]; then
-  echo "[entrypoint] setting up nginx basic auth (user: $AUTH_USERNAME)"
-  htpasswd -bc /etc/nginx/.htpasswd "$AUTH_USERNAME" "$AUTH_PASSWORD" 2>/dev/null
-  AUTH_BLOCK='auth_basic "Openclaw";
+case "$OPENCLAW_BASIC_AUTH" in
+  auto)
+    if [ -n "$AUTH_PASSWORD" ]; then
+      echo "[entrypoint] setting up nginx basic auth (user: $AUTH_USERNAME; mode=auto)"
+      htpasswd -Bbc /etc/nginx/.htpasswd "$AUTH_USERNAME" "$AUTH_PASSWORD" 2>/dev/null
+      AUTH_BLOCK='auth_basic "Openclaw";
         auth_basic_user_file /etc/nginx/.htpasswd;'
-else
-  echo "[entrypoint] no AUTH_PASSWORD set, nginx will not require authentication"
-fi
+    else
+      echo "[entrypoint] basic auth disabled (mode=auto; no AUTH_PASSWORD)"
+    fi
+    ;;
+  on)
+    if [ -z "$AUTH_PASSWORD" ]; then
+      echo "[entrypoint] ERROR: OPENCLAW_BASIC_AUTH=on requires AUTH_PASSWORD" >&2
+      exit 1
+    fi
+    echo "[entrypoint] setting up nginx basic auth (user: $AUTH_USERNAME; mode=on)"
+    htpasswd -Bbc /etc/nginx/.htpasswd "$AUTH_USERNAME" "$AUTH_PASSWORD" 2>/dev/null
+    AUTH_BLOCK='auth_basic "Openclaw";
+        auth_basic_user_file /etc/nginx/.htpasswd;'
+    ;;
+  off)
+    if [ -n "$AUTH_PASSWORD" ]; then
+      echo "[entrypoint] basic auth disabled (mode=off; ignoring AUTH_PASSWORD)"
+    else
+      echo "[entrypoint] basic auth disabled (mode=off)"
+    fi
+    ;;
+  *)
+    echo "[entrypoint] ERROR: invalid OPENCLAW_BASIC_AUTH='$OPENCLAW_BASIC_AUTH' (expected: auto|on|off)" >&2
+    exit 1
+    ;;
+esac
 
 # Build hooks location block (skips HTTP basic auth, openclaw validates hook token)
 HOOKS_LOCATION_BLOCK=""
