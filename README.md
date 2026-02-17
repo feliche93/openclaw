@@ -230,6 +230,41 @@ If Infisical credentials are set, the container entrypoints re-exec themselves u
 
 When hooks are enabled and `AUTH_PASSWORD` is set, the hooks path automatically bypasses HTTP basic auth. Openclaw validates requests using the hook token instead. Docs: https://docs.openclaw.ai/automation/webhook
 
+#### Putting `/hooks/*` live later (Cloudflare Access + service tokens)
+
+If you protect the UI with Cloudflare Access (human login), hooks typically need a different auth path so automations can call them without an interactive login.
+
+Recommended approach:
+
+1. Cloudflare Access Application for `https://<host>/*` (human login policy for the UI).
+2. Cloudflare Access Application for `https://<host>/hooks/*` with a **Service Auth** policy (machine callers use a Cloudflare service token).
+3. Enable hooks in OpenClaw and store the hook token as a secret:
+   - `HOOKS_ENABLED=true`, `HOOKS_PATH=/hooks`, `HOOKS_TOKEN=<long-random>`
+   - Prefer keeping `HOOKS_TOKEN` in Infisical and injecting it at runtime (via `INFISICAL_*`), not in Coolify plaintext env vars.
+
+Auth expectations:
+
+- Cloudflare Access service token: caller sends `CF-Access-Client-Id` and `CF-Access-Client-Secret`
+- OpenClaw hook token: caller sends either:
+  - `x-openclaw-token: <HOOKS_TOKEN>` (recommended), or
+  - `Authorization: Bearer <HOOKS_TOKEN>`
+
+Example (wake the agent via hooks, using both Cloudflare Access + OpenClaw hook token):
+
+```bash
+curl -X POST "https://<host>/hooks/wake" \
+  -H "content-type: application/json" \
+  -H "CF-Access-Client-Id: <cf_client_id>" \
+  -H "CF-Access-Client-Secret: <cf_client_secret>" \
+  -H "x-openclaw-token: <hooks_token>" \
+  --data '{"text":"ping","mode":"now"}'
+```
+
+If your webhook source cannot send custom headers:
+
+- Keep `/hooks/*` behind Cloudflare Access Service Auth, and
+- Add a small proxy (Cloudflare Worker, serverless function, or internal gateway) that receives the external webhook and forwards it to OpenClaw while adding `x-openclaw-token`.
+
 ### Browser tool (remote CDP sidecar, optional)
 
 | Variable | Default | Description |
