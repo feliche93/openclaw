@@ -123,6 +123,23 @@ RUN set -eux; \
   BVG_BIN_DIR=/usr/local/bin /opt/bvg-cli/scripts/install-global.sh; \
   bvg --help >/dev/null
 
+# Provide the `goplaces` CLI for the built-in Google Places skill.
+# Pin version for reproducible Coolify builds; override with --build-arg if needed.
+ARG GOPLACES_VERSION=0.3.0
+RUN set -eux; \
+  arch="$(uname -m)"; \
+  case "$arch" in \
+    x86_64) go_arch="amd64" ;; \
+    aarch64|arm64) go_arch="arm64" ;; \
+    *) echo "Unsupported architecture for goplaces: $arch" >&2; exit 1 ;; \
+  esac; \
+  url="https://github.com/steipete/goplaces/releases/download/v${GOPLACES_VERSION}/goplaces_${GOPLACES_VERSION}_linux_${go_arch}.tar.gz"; \
+  curl -fsSL "$url" -o /tmp/goplaces.tgz; \
+  tar -xzf /tmp/goplaces.tgz -C /tmp goplaces; \
+  install -m 0755 /tmp/goplaces /usr/local/bin/goplaces; \
+  rm -f /tmp/goplaces.tgz /tmp/goplaces; \
+  goplaces --help >/dev/null
+
 # Coolify deployment cannot reliably bind-mount individual files from the repo
 # into the container. Bake the updated scripts into a derived image instead.
 COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh

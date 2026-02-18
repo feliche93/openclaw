@@ -277,6 +277,12 @@ else
   echo "[entrypoint] bvg missing from PATH"
 fi
 
+if command -v goplaces >/dev/null 2>&1; then
+  echo "[entrypoint] goplaces available"
+else
+  echo "[entrypoint] goplaces missing from PATH"
+fi
+
 # ── Read hooks path from generated config (if hooks enabled) ─────────────────
 HOOKS_PATH=""
 HOOKS_PATH=$(node -e "
