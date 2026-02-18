@@ -111,6 +111,18 @@ RUN set -eux; \
   rm -f /tmp/himalaya.tgz /tmp/himalaya; \
   himalaya --version
 
+# Provide the `bvg` CLI for BVG transport API workflows.
+# Installed directly from GitHub source tarball (no manual clone needed).
+ARG BVGCLI_REPO=feliche93/bvg-cli
+ARG BVGCLI_REF=main
+RUN set -eux; \
+  rm -rf /opt/bvg-cli; \
+  mkdir -p /opt/bvg-cli; \
+  curl -fsSL "https://codeload.github.com/${BVGCLI_REPO}/tar.gz/${BVGCLI_REF}" \
+    | tar -xz -C /opt/bvg-cli --strip-components=1; \
+  BVG_BIN_DIR=/usr/local/bin /opt/bvg-cli/scripts/install-global.sh; \
+  bvg --help >/dev/null
+
 # Coolify deployment cannot reliably bind-mount individual files from the repo
 # into the container. Bake the updated scripts into a derived image instead.
 COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh

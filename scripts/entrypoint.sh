@@ -271,6 +271,12 @@ else
   echo "[entrypoint] whisper missing from PATH"
 fi
 
+if command -v bvg >/dev/null 2>&1; then
+  echo "[entrypoint] bvg available"
+else
+  echo "[entrypoint] bvg missing from PATH"
+fi
+
 # ── Read hooks path from generated config (if hooks enabled) ─────────────────
 HOOKS_PATH=""
 HOOKS_PATH=$(node -e "
