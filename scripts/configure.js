@@ -84,11 +84,14 @@ if (!config.gateway.mode) {
 }
 
 // Gateway token: required via OPENCLAW_GATEWAY_TOKEN env var (enforced by entrypoint.sh)
+// Do not persist token values to JSON state; runtime env is the source of truth.
 const token = (process.env.OPENCLAW_GATEWAY_TOKEN || "").trim();
 if (token) {
   ensure(config, "gateway", "auth");
   config.gateway.auth.mode = "token";
-  config.gateway.auth.token = token;
+  if (Object.prototype.hasOwnProperty.call(config.gateway.auth, "token")) {
+    delete config.gateway.auth.token;
+  }
 }
 
 // Allow control UI without device pairing (only set defaults, don't overwrite)

@@ -9,10 +9,11 @@ services:
       - OPENCLAW_PRIMARY_MODEL=opencode/kimi-k2.5
       # Auth
       # Keep these out of git; prefer setting them in a local `.env` file.
-      # If OPENCLAW_GATEWAY_TOKEN is unset, the entrypoint auto-generates it and persists it.
+      # OPENCLAW_GATEWAY_TOKEN is required (prefer Infisical/env injection).
       - AUTH_USERNAME=${AUTH_USERNAME:-admin}
       - AUTH_PASSWORD=${AUTH_PASSWORD:-}
       - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN:-}
+      - OPENCLAW_EXEC_SOCKET_TOKEN=${OPENCLAW_EXEC_SOCKET_TOKEN:-}
       # Browser sidecar
       - BROWSER_CDP_URL=http://browser:9223
       - BROWSER_DEFAULT_PROFILE=openclaw

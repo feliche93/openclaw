@@ -147,6 +147,37 @@ fi
 # ── Configure openclaw from env vars ─────────────────────────────────────────
 echo "[entrypoint] running configure..."
 node /app/scripts/configure.js
+
+# Keep gateway token env-authoritative; remove any persisted token field.
+node -e "
+  const fs = require('fs');
+  const p = '$STATE_DIR/openclaw.json';
+  try {
+    const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (j.gateway && j.gateway.auth && Object.prototype.hasOwnProperty.call(j.gateway.auth, 'token')) {
+      delete j.gateway.auth.token;
+      fs.writeFileSync(p, JSON.stringify(j, null, 2));
+    }
+  } catch (_) {}
+" || true
+
+# Optional: pre-seed exec-approvals socket token from env (e.g. Infisical).
+# This avoids random token generation drifting across restarts.
+if [ -n "${OPENCLAW_EXEC_SOCKET_TOKEN:-}" ]; then
+  export OPENCLAW_EXEC_APPROVALS_SOCKET_PATH="${OPENCLAW_EXEC_APPROVALS_SOCKET_PATH:-$STATE_DIR/exec-approvals.sock}"
+  echo "[entrypoint] writing exec-approvals token from env"
+  node -e "
+    const fs = require('fs');
+    const token = process.env.OPENCLAW_EXEC_SOCKET_TOKEN || '';
+    const socketPath = process.env.OPENCLAW_EXEC_APPROVALS_SOCKET_PATH || '$STATE_DIR/exec-approvals.sock';
+    const p = '$STATE_DIR/exec-approvals.json';
+    if (!token) process.exit(0);
+    fs.mkdirSync('$STATE_DIR', { recursive: true });
+    fs.writeFileSync(p, JSON.stringify({ socket: { path: socketPath, token } }, null, 2));
+  " || true
+  chmod 600 "$STATE_DIR/exec-approvals.json" || true
+fi
+
 chmod 600 "$STATE_DIR/openclaw.json"
 
 # ── Optional: camofox-browser plugin (Camoufox anti-detection browser) ───────

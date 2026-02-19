@@ -17,7 +17,7 @@ docker run -d \
 
 - `ANTHROPIC_API_KEY` — any [supported provider key](#ai-providers-at-least-one-required) works (OpenAI, Gemini, etc.)
 - `AUTH_PASSWORD` — protects the web UI with HTTP basic auth (user defaults to `admin`, override with `AUTH_USERNAME`)
-- `OPENCLAW_GATEWAY_TOKEN` — internal API token; auto-generated if omitted, but set it explicitly for stable API access
+- `OPENCLAW_GATEWAY_TOKEN` — internal API token; required (inject via Infisical or env var)
 - `/data` — persists state, config, and workspace across restarts
 
 ### Full Setup (docker-compose)
@@ -217,7 +217,9 @@ The wrappers pass the runtime token via `INFISICAL_TOKEN` environment variable (
 
 | Variable | Default | Description |
 |---|---|---|
-| `OPENCLAW_GATEWAY_TOKEN` | *(auto-generated)* | Bearer token for gateway auth. Auto-generated and persisted to `<STATE_DIR>/gateway.token` if not set. |
+| `OPENCLAW_GATEWAY_TOKEN` | *(required)* | Bearer token for gateway auth. Use Infisical/runtime env injection. This image does not persist the token to `openclaw.json`. |
+| `OPENCLAW_EXEC_SOCKET_TOKEN` | *(optional)* | If set, seeds `<STATE_DIR>/exec-approvals.json` socket token on startup (recommended via Infisical). |
+| `OPENCLAW_EXEC_APPROVALS_SOCKET_PATH` | `<STATE_DIR>/exec-approvals.sock` | Optional override for exec-approvals Unix socket path when using `OPENCLAW_EXEC_SOCKET_TOKEN`. |
 | `OPENCLAW_GATEWAY_PORT` | `18789` | Internal port the gateway binds to. |
 | `OPENCLAW_GATEWAY_BIND` | `loopback` | Gateway bind mode. `loopback` = 127.0.0.1 only (nginx proxies LAN traffic). `lan` = 0.0.0.0 (direct access, bypasses nginx auth). Also: `tailnet`, `auto`, `custom`. **Guardrail:** this image refuses `lan` unless `OPENCLAW_ALLOW_LAN_BIND=true` is set. |
 | `OPENCLAW_ALLOW_LAN_BIND` | *(none)* | Set to `true` to allow `OPENCLAW_GATEWAY_BIND=lan`. Unsafe unless you know your ingress/firewall setup. |
