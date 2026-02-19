@@ -538,7 +538,9 @@ GATEWAY_ARGS=(
   --bind "$GATEWAY_BIND"
 )
 
-GATEWAY_ARGS+=(--token "$GATEWAY_TOKEN")
+# Avoid passing secrets via process args. The gateway reads
+# OPENCLAW_GATEWAY_TOKEN from env by default.
+export OPENCLAW_GATEWAY_TOKEN="$GATEWAY_TOKEN"
 
 # cwd must be the app root so the gateway finds dist/control-ui/ assets
 cd /opt/openclaw/app
