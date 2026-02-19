@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.openclaw-custom
+      args:
+        - AGENT_BROWSER_VERSION=latest
     image: openclaw-custom:latest
     ports:
       - "8081:8080"

@@ -63,7 +63,7 @@ Two-layer Docker build:
 .github/workflows/build.yml         — CI on push/PR (build only, no push)
 Dockerfile.base                     — multi-stage: build openclaw from source → slim runtime
 Dockerfile                          — FROM base, add nginx + config scripts + entrypoint
-Dockerfile.openclaw-custom          — Coolify-oriented derived image with extra CLIs for built-in skills/tools
+Dockerfile.openclaw-custom          — Coolify-oriented derived image with extra CLIs for built-in skills/tools (including global `agent-browser`)
 scripts/configure.js                — reads env vars, writes/patches openclaw.json
 scripts/entrypoint.sh               — container entrypoint: configure → nginx → gateway
 scripts/smoke.js                    — smoke test (openclaw --version)
@@ -71,6 +71,11 @@ nginx/default.conf                  — reverse proxy :8080 → :18789, optional
 .dockerignore                       — standard ignores
 .env.example                        — env var reference
 ```
+
+The `openclaw` service in `docker-compose.yml` builds `Dockerfile.openclaw-custom` with:
+- `AGENT_BROWSER_VERSION=latest` (build arg)
+
+This installs `agent-browser` globally in the container so OpenClaw agents can call it directly.
 
 ## auto-update.yml workflow
 

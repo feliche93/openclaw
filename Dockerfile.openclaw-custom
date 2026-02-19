@@ -78,6 +78,17 @@ RUN set -eux; \
 # Provide `mcporter` CLI inside the container so agents can use it and it survives restarts.
 RUN npm i -g mcporter@0.7.3
 
+# Provide `agent-browser` CLI for browser automation workflows from inside the
+# openclaw container (typically used with remote CDP sidecars).
+ARG AGENT_BROWSER_VERSION=latest
+RUN set -eux; \
+  if [ "${AGENT_BROWSER_VERSION}" = "latest" ]; then \
+    npm i -g agent-browser; \
+  else \
+    npm i -g "agent-browser@${AGENT_BROWSER_VERSION}"; \
+  fi; \
+  agent-browser >/dev/null
+
 # OpenClaw ships a bundled "coding-agent" skill that can drive Codex CLI, but the
 # upstream image doesn't include the `codex` binary. Install it so the skill is
 # eligible inside Coolify deployments.
