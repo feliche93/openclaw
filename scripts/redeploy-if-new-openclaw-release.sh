@@ -65,9 +65,8 @@ ensure_coolify_token() {
     return 2
   fi
 
-  exec infisical run \
+  exec env INFISICAL_TOKEN="$INFISICAL_RUNTIME_TOKEN" infisical run \
     --domain "$INFISICAL_API_URL" \
-    --token "$INFISICAL_RUNTIME_TOKEN" \
     --projectId "$INFISICAL_PROJECT_ID" \
     --env "$INFISICAL_ENV" \
     --path "$INFISICAL_PATH_EFFECTIVE" \

@@ -165,6 +165,7 @@ If a provider env var is removed, that provider section is cleaned from `opencla
 ### Infisical (optional; recommended for Coolify)
 
 If Infisical credentials are set, the container entrypoints re-exec themselves under `infisical run` and inject secrets at runtime. This lets you keep almost all application secrets out of Coolify env vars.
+The wrappers pass the runtime token via `INFISICAL_TOKEN` environment variable (not `--token`) to avoid exposing it in `ps`/`docker top` command arguments.
 
 | Variable | Default | Description |
 |---|---|---|

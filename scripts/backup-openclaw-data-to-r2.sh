@@ -88,9 +88,8 @@ ensure_infisical_injection_if_needed() {
   fi
 
   echo "[backup] infisical: injecting secrets for scheduled task (env=$INFISICAL_ENV_EFFECTIVE path=$INFISICAL_PATH_EFFECTIVE)"
-  exec infisical run \
+  exec env INFISICAL_TOKEN="$INFISICAL_RUNTIME_TOKEN" infisical run \
     --domain "$INFISICAL_API_URL" \
-    --token "$INFISICAL_RUNTIME_TOKEN" \
     --projectId "$INFISICAL_PROJECT_ID" \
     --env "$INFISICAL_ENV_EFFECTIVE" \
     --path "$INFISICAL_PATH_EFFECTIVE" \
